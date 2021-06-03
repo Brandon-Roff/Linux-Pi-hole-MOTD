@@ -1,0 +1,90 @@
+#!/bin/sh
+
+#colours
+BLK='\033[0;30m' # Black
+RED='\033[0;31m' # Red
+GRN='\033[0;32m' # Green
+BLU='\033[0;34m' # Blue
+CYA='\033[0;36m' # Cyan
+WHI='\033[0;37m' # White
+YEL='\033[0;33m' # Yellow
+PUR='\033[0;35m' # Purple
+NC='\033[0m' # No Color
+
+#logo
+ echo -e "
+               ${GRN}.;;,.
+               .ccccc:,.
+                :cccclll:.      ..,,
+                 :ccccclll.   ;ooodc
+                  'ccll:;ll .oooodc
+                    .;cll.;;looo:.
+                        ${RED}.. ','.
+                       .',,,,,,'.
+                     .',,,,,,,,,,.
+                   .',,,,,,,,,,,,....
+                 ....''',,,,,,,'.......
+               .........  ....  .........
+               ..........      ..........
+              ..........      ..........
+              .........  ....  .........
+                 ........,,,,,,,'......
+                   ....',,,,,,,,,,,,.
+                      .',,,,,,,,,'.
+                       .',,,,,,'.
+                        ..'''.${NC}
+"
+#Version
+echo -e "${YEL}Versions:$NC
+${YEL}Pihole.....:$NC `pihole -v | grep Pi-hole | awk {'print $4, $5, $6'}`
+${YEL}AdminLTE...:$NC `pihole -v | grep AdminLTE | awk {'print $4, $5, $6'}`
+${YEL}FTL........:$NC `pihole -v | grep FTL | awk {'print $4, $5, $6'}` "
+echo ""
+#fail2ban
+jails=($(fail2ban-client status | grep "Jail list:" | sed "s/ //g" | awk '{split($2,a,",");for(i in a) print a[i]}'))
+
+out="jail,failed,total,banned,total\n"
+
+for jail in ${jails[@]}; do
+    # slow because fail2ban-client has to be called for every jail (~70ms per jail)
+    status=$(fail2ban-client status ${jail})
+    failed=$(echo "$status" | grep -ioP '(?<=Currently failed:\t)[[:digit:]]+')
+    totalfailed=$(echo "$status" | grep -ioP '(?<=Total failed:\t)[[:digit:]]+')
+    banned=$(echo "$status" | grep -ioP '(?<=Currently banned:\t)[[:digit:]]+')
+    totalbanned=$(echo "$status" | grep -ioP '(?<=Total banned:\t)[[:digit:]]+')
+    out+="$jail,$failed,$totalfailed,$banned,$totalbanned\n"
+done
+
+echo -e "${YEL}fail2ban status:${NC}"
+echo -e 		$out | column -ts $',' | sed -e 's/^/  /'
+
+echo""
+#machine
+upSeconds="$(/usr/bin/cut -d. -f1 /proc/uptime)"
+secs=$((${upSeconds}%60))
+mins=$((${upSeconds}/60%60))
+hours=$((${upSeconds}/3600%24))
+days=$((${upSeconds}/86400))
+UPTIME=`printf "%d days, %02dh %02dm %02ds" "$days" "$hours" "$mins" "$secs"`
+echo -e "${YEL}Machine:${NC}
+${YEL}Time.......:$NC `date +"%A, %e %B %Y, %r"`
+${YEL}Uptime.....:$NC ${UPTIME}
+${YEL}Temperature:$NC `/opt/vc/bin/vcgencmd measure_temp | cut -c "6-9"` C
+${YEL}Processes..:$NC `ps ax | wc -l | tr -d " "`
+${YEL}Memory.....:$NC `free -m | awk 'NR==2 {printf "Used: %sMB of %sMB",$3,$2; }'`
+${YEL}Disk.......:$NC `df -h | awk 'NR==2 {printf "Total: %sB, Used: %sB, Free: %sB",$2,$3,$4;}'`"
+echo""
+#last login
+echo -e "$YEL Last Login:$NC
+$YEL IP.........:$NC  `last -i $USER | grep -v 'still logged' | head -1 | awk {'print $3'}`
+$YEL Date/Time..:$NC  `last -i $USER | grep -v 'still logged' | head -1 | awk {'print $4, $5, $6, $7'}`"
+echo""
+#commands
+echo -e "${YEL}Commands:$NC
+raspi-config     (Configure Raspberry)
+pihole -h        (Show commands)
+pihole -up       (Update PiHole)
+pihole -r        (Repair PiHole)
+pihole -g        (Update Blocklist)
+pihole -a -p     (Change Admin-Page passwd)"
+echo""
