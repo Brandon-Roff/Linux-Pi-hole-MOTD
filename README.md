@@ -1,5 +1,3 @@
-# Linux Pi-hole MOTD
-
 ![Pi-hole Logo](https://wp-cdn.pi-hole.net/wp-content/uploads/2023/05/pihole-logo-horizontal-white-e1683321640117.png)
 
 This README provides instructions for setting up a Message of the Day (MOTD) file that displays Pi-hole statistics when you open an SSH session.
